@@ -55,6 +55,8 @@ func main() {
 
 	r := chi.NewRouter()
 
+	r.Use(routes.LoggingMiddleware)
+
 	r.Mount("/v1", playerRoutes)
 
 	http.ListenAndServe(":"+port, r)

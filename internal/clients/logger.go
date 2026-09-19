@@ -11,10 +11,10 @@ import (
 )
 
 type Logger interface {
-	Debug(message string) error
-	Info(message string) error
-	Warn(message string) error
-	Error(message string) error
+	Debug(message string, args ...any) error
+	Info(message string, args ...any) error
+	Warn(message string, args ...any) error
+	Error(message string, args ...any) error
 }
 
 type logger struct {
@@ -31,23 +31,27 @@ func NewLogger(client http.Client, playerID uuid.UUID) Logger {
 	}
 }
 
-func (l *logger) Debug(message string) error {
-	return l.makeReq(message, "debug")
+func (l *logger) Debug(message string, args ...any) error {
+	return l.makeReq("debug", message, args...)
 }
 
-func (l *logger) Info(message string) error {
-	return l.makeReq(message, "info")
+func (l *logger) Info(message string, args ...any) error {
+	return l.makeReq("info", message, args...)
 }
 
-func (l *logger) Warn(message string) error {
-	return l.makeReq(message, "warn")
+func (l *logger) Warn(message string, args ...any) error {
+	return l.makeReq("warn", message, args...)
 }
 
-func (l *logger) Error(message string) error {
-	return l.makeReq(message, "error")
+func (l *logger) Error(message string, args ...any) error {
+	return l.makeReq("error", message, args...)
 }
 
-func (l *logger) makeReq(message string, level string) error {
+func (l *logger) makeReq(level, message string, args ...any) error {
+	msg := fmt.Sprintf(message, args)
+
+	log.Printf("[%v] %v", level, msg)
+
 	url := fmt.Sprintf("http://%s/logs", l.host)
 
 	data := struct {
@@ -56,7 +60,7 @@ func (l *logger) makeReq(message string, level string) error {
 		Level    string    `json:"level"`
 	}{
 		PlayerID: l.playerID,
-		Message:  message,
+		Message:  msg,
 		Level:    level,
 	}
 
@@ -64,9 +68,6 @@ func (l *logger) makeReq(message string, level string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal log request: %w", err)
 	}
-
-	log.Printf("Sending log request to remote host %s", url)
-	log.Printf("%s", body)
 
 	req, err := http.NewRequest(
 		http.MethodPost,

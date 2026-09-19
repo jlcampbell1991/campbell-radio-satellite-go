@@ -48,9 +48,8 @@ func main() {
 		utilities.ReadAndClearCrashReports(crashReportClient.PostReport)
 	})
 
-	player := player.NewPlayer(ffplay, amixer, amixerDevice)
 	logger := clients.NewLogger(httpClient, deviceId)
-
+	player := player.NewPlayer(ffplay, amixer, amixerDevice, logger)
 	playerRoutes := routes.NewPlayerRoutes(httpClient, player, logger)
 
 	r := chi.NewRouter()
@@ -59,7 +58,6 @@ func main() {
 
 	r.Mount("/v1", playerRoutes)
 
+	log.Printf("campbell-radio listening on port %v", port)
 	http.ListenAndServe(":"+port, r)
-
-	fmt.Println("Hi, this is the campbell-radio-satellte")
 }

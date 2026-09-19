@@ -3,36 +3,29 @@ package player
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"math"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"syscall"
 
+	"github.com/jlcampbell1991/campbell-radio-satellite-go/internal/clients"
 	"github.com/jlcampbell1991/campbell-radio-satellite-go/internal/models"
+	"github.com/jlcampbell1991/campbell-radio-satellite-go/internal/utilities"
 )
 
 type Player interface {
-	Play(
-		medium models.Media,
-		logger *log.Logger,
-		callback func(),
-	) error
+	Play(medium models.Media, callback func()) error
 
-	PauseResume(logger *log.Logger) error
+	PauseResume() error
 
-	SetVolume(
-		volume int,
-		logger *log.Logger,
-	) error
+	SetVolume(volume int) error
 
-	GetVolume(
-		logger *log.Logger,
-	) (*int, error)
+	GetVolume() (*int, error)
 }
 
 type player struct {
+	logger       clients.Logger
 	currentProc  *exec.Cmd
 	paused       bool
 	ffplay       string
@@ -40,20 +33,17 @@ type player struct {
 	amixerDevice string
 }
 
-func NewPlayer(ffplay, amixer, amixerDevice string) Player {
+func NewPlayer(ffplay, amixer, amixerDevice string, logger clients.Logger) Player {
 	return &player{
+		logger:       logger,
 		ffplay:       ffplay,
 		amixer:       amixer,
 		amixerDevice: amixerDevice,
 	}
 }
 
-func (p *player) Play(
-	medium models.Media,
-	logger *log.Logger,
-	callback func(),
-) error {
-	logger.Printf("%+v", medium)
+func (p *player) Play(medium models.Media, callback func()) error {
+	p.logger.Info("%+v", medium)
 
 	threshold := medium.Loudness + medium.LRange/2
 
@@ -131,21 +121,21 @@ func (p *player) Play(
 	p.currentProc = cmd
 	p.paused = false
 
-	go func() {
+	utilities.Go(func() {
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
-			logger.Printf("%s", scanner.Text())
+			p.logger.Info("%s", scanner.Text())
 		}
-	}()
+	})
 
-	go func() {
+	utilities.Go(func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			logger.Printf("ffplay: %s", scanner.Text())
+			p.logger.Info("ffplay: %s", scanner.Text())
 		}
-	}()
+	})
 
-	go func() {
+	utilities.Go(func() {
 		err := cmd.Wait()
 
 		// A newer process may have replaced this one.
@@ -156,22 +146,22 @@ func (p *player) Play(
 		p.currentProc = nil
 
 		if err != nil {
-			logger.Printf("ffplay exited: %v", err)
+			p.logger.Error("ffplay exited: %v", err)
 		} else {
-			logger.Printf("ffplay exited successfully")
+			p.logger.Info("ffplay exited successfully")
 		}
 
 		if callback != nil {
 			callback()
 		}
-	}()
+	})
 
 	return nil
 }
 
-func (p *player) PauseResume(logger *log.Logger) error {
+func (p *player) PauseResume() error {
 	if p.currentProc == nil {
-		logger.Printf("No current ffplay process")
+		p.logger.Error("No current ffplay process")
 		return fmt.Errorf("no current ffplay process")
 	}
 
@@ -181,23 +171,20 @@ func (p *player) PauseResume(logger *log.Logger) error {
 		}
 
 		p.paused = false
-		logger.Printf("ffplay resumed")
+		p.logger.Info("ffplay resumed")
 	} else {
 		if err := p.currentProc.Process.Signal(syscall.SIGSTOP); err != nil {
 			return fmt.Errorf("failed to pause ffplay: %w", err)
 		}
 
 		p.paused = true
-		logger.Printf("ffplay paused")
+		p.logger.Info("ffplay paused")
 	}
 
 	return nil
 }
 
-func (p *player) SetVolume(
-	volume int,
-	logger *log.Logger,
-) error {
+func (p *player) SetVolume(volume int) error {
 	cmd := exec.Command(
 		p.amixer,
 		"set",
@@ -213,14 +200,12 @@ func (p *player) SetVolume(
 		)
 	}
 
-	logger.Printf("amixer volume set to %d", volume)
+	p.logger.Info("amixer volume set to %d", volume)
 
 	return nil
 }
 
-func (p *player) GetVolume(
-	logger *log.Logger,
-) (*int, error) {
+func (p *player) GetVolume() (*int, error) {
 	cmd := exec.Command(
 		p.amixer,
 		"get",
@@ -244,7 +229,7 @@ func (p *player) GetVolume(
 		return nil, fmt.Errorf("invalid volume: %w", err)
 	}
 
-	logger.Printf("amixer volume: %d", volume)
+	p.logger.Info("amixer volume: %d", volume)
 
 	return &volume, nil
 }

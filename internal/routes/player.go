@@ -31,10 +31,10 @@ func NewPlayerRoutes(
 		logger: logger,
 	}
 
-	r.Put("/v1/play", p.Play)
-	r.Put("/v1/pause-resume", p.PauseResume)
-	r.Put("/v1/volume", p.SetVolume)
-	r.Get("/v1/volume", p.GetVolume)
+	r.Put("/play", p.Play)
+	r.Put("/pause-resume", p.PauseResume)
+	r.Put("/volume", p.SetVolume)
+	r.Get("/volume", p.GetVolume)
 
 	return r
 }
@@ -80,7 +80,6 @@ func (p *playerRoutes) Play(w http.ResponseWriter, r *http.Request) {
 
 	if err := p.player.Play(
 		req.Medium,
-		log.Default(),
 		func() {
 			err := callbackFn(p.client, req.Callback)
 			if err != nil {
@@ -103,7 +102,7 @@ func (p *playerRoutes) PauseResume(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	if err := p.player.PauseResume(log.Default()); err != nil {
+	if err := p.player.PauseResume(); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -119,7 +118,7 @@ func (p *playerRoutes) SetVolume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := p.player.SetVolume(req.Volume, log.Default()); err != nil {
+	if err := p.player.SetVolume(req.Volume); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -128,7 +127,7 @@ func (p *playerRoutes) SetVolume(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *playerRoutes) GetVolume(w http.ResponseWriter, r *http.Request) {
-	volume, err := p.player.GetVolume(log.Default())
+	volume, err := p.player.GetVolume()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

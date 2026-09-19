@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -43,14 +42,8 @@ type playRequest struct {
 	Medium   models.Media `json:"medium"`
 	Callback string       `json:"callback"`
 }
-
-// type playerRequest struct {
-// 	PlayerID string `json:"player_id"`
-// }
-
 type volumeRequest struct {
 	Volume int `json:"volume"`
-	// PlayerID string `json:"player_id"`
 }
 
 func callbackFn(client http.Client, callbackURL string) error {
@@ -83,7 +76,7 @@ func (p *playerRoutes) Play(w http.ResponseWriter, r *http.Request) {
 		func() {
 			err := callbackFn(p.client, req.Callback)
 			if err != nil {
-				p.logger.Error(fmt.Sprint("error while making callback on Play: %d", err))
+				p.logger.Error("error while making callback on Play: %d", err)
 			}
 		},
 	); err != nil {
@@ -95,13 +88,6 @@ func (p *playerRoutes) Play(w http.ResponseWriter, r *http.Request) {
 }
 
 func (p *playerRoutes) PauseResume(w http.ResponseWriter, r *http.Request) {
-	// var req playerRequest
-
-	// if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
-
 	if err := p.player.PauseResume(); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

@@ -2,6 +2,7 @@ package player
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os/exec"
@@ -43,7 +44,8 @@ func NewPlayer(ffplay, amixer, amixerDevice string, logger clients.Logger) Playe
 }
 
 func (p *player) Play(medium models.Media, callback func()) error {
-	p.logger.Info("%+v", medium)
+	data, _ := json.MarshalIndent(medium, "", "  ")
+	p.logger.Info("Media:\n%s", data)
 
 	threshold := medium.Loudness + medium.LRange/2
 
@@ -138,7 +140,6 @@ func (p *player) Play(medium models.Media, callback func()) error {
 	utilities.Go(func() {
 		err := cmd.Wait()
 
-		// A newer process may have replaced this one.
 		if p.currentProc != cmd {
 			return
 		}

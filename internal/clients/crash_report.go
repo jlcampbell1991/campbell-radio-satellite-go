@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type CrashReportClient interface {
@@ -16,11 +17,17 @@ type CrashReportClient interface {
 }
 
 type crashReportClient struct {
-	client http.Client
+	client     http.Client
+	deviceName string
+	deviceId   uuid.UUID
 }
 
-func NewCrashReportClient(client http.Client) CrashReportClient {
-	return &crashReportClient{client: client}
+func NewCrashReportClient(client http.Client, deviceName string, deviceId uuid.UUID) CrashReportClient {
+	return &crashReportClient{
+		client:     client,
+		deviceName: deviceName,
+		deviceId:   deviceId,
+	}
 }
 
 type crashReportRequest struct {
@@ -51,15 +58,12 @@ func (c *crashReportClient) PostReport(report string, createdAt time.Time) error
 		return err
 	}
 
-	deviceId := os.Getenv("DEVICE_ID")
-	deviceName := os.Getenv("DEVICE_NAME")
-
-	url := fmt.Sprintf("http://192.168.50.185:9090/devices/%v/crash-reports", deviceId)
+	url := fmt.Sprintf("http://192.168.50.185:9090/devices/%v/crash-reports", c.deviceId.String())
 
 	data, err := json.Marshal(crashReportRequest{
 		Report:     report,
 		CreatedAt:  createdAt,
-		DeviceName: deviceName,
+		DeviceName: c.deviceName,
 		Ip:         ip,
 	})
 	if err != nil {

@@ -32,7 +32,7 @@ func main() {
 
 	utilities.Go(func() {
 		crashReportClient := clients.NewCrashReportClient(httpClient)
-		utilities.ReadAndClearCrashReports(crashReportClient.PostReport))
+		utilities.ReadAndClearCrashReports(crashReportClient.PostReport)
 	})
 
 	fmt.Println("Hi, this is the campbell-radio-satellte")
